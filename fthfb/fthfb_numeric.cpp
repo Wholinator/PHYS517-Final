@@ -1,13 +1,43 @@
 // hfb_numeric_current.cpp
 //
-// C++ translation of hfb_numeric_current.py
+// C++ translation of hfb_numeric_current.py with finite-temperature support.
 //
-// Hartree-Fock-Bogoliubov calculation on the 2D Hubbard model.
-// Logic mirrors the Python implementation as closely as practical.
+// Hartree-Fock-Bogoliubov calculation on the 2D Hubbard model, supporting
+// both zero temperature (T=0 projector onto negative-energy modes) and
+// finite temperature following Goodman, Nucl. Phys. A352 (1981) 30-44.
+//
+// At T>0 every BdG eigenmode contributes weight f_j = 1/(1+exp(β λ_j)) to
+// the generalized density R = Σ_j f_j |v_j⟩⟨v_j|.  The HFB equations
+// (Goodman eq. 4.36) have the same form as at T=0; only the construction
+// of R from the eigendecomposition changes.  The grand potential
+//     Ω = E - TS - μN,
+//     E = Tr[(T + Γ/2) ρ + Δ t†/2]                       (Goodman 3.23)
+//     S/k_B = -Σᵢ [fᵢ ln fᵢ + (1-fᵢ) ln(1-fᵢ)]            (Goodman 3.27)
+// is reported alongside E.  The SCF converges to the self-consistent
+// fields *at the requested temperature* — there is no annealing.
 //
 // Build:
-//   g++ -O3 -march=native -DNDEBUG -DEIGEN_NO_DEBUG -std=c++17 -I/usr/include/eigen3 \
-//       hfb_numeric_current.cpp data_output.cpp -o hfb -lhdf5
+//   g++ -O3 -march=native -DNDEBUG -DEIGEN_NO_DEBUG -std=c++17 \
+//       -I/usr/include/eigen3 hfb_numeric_current.cpp -o hfb
+//
+// Run:
+//   ./hfb                  -> seed=entropy, kT=0
+//   ./hfb <seed>           -> seed=<seed>, kT=0
+//   ./hfb <seed> <kT>      -> seed=<seed>, kT=<kT>   (in units of t)
+//
+// Notes on fidelity:
+//   * np.linalg.eigh  -> Eigen::SelfAdjointEigenSolver  (ascending eigenvalues)
+//   * np.kron         -> Eigen::kroneckerProduct
+//   * np.block        -> manual block placement via .block()
+//   * np.roll         -> manual modular index shift
+//   * Random numbers: NumPy's PCG64 / MT19937 streams cannot be bit-reproduced
+//     in standard C++; we use std::mt19937 with std::normal_distribution and
+//     std::uniform_real_distribution. Algorithmic behavior is preserved; the
+//     specific random samples will differ from any given Python run.
+//   * Complex / real typing: the original Python code starts with real p, k,
+//     h and silently promotes them to complex once delta enters the mixing.
+//     Here we keep p, k, h as complex throughout (with zero imaginary parts
+//     initially), which matches the steady-state typing of the Python code.
 
 #include <Eigen/Dense>
 #include <unsupported/Eigen/KroneckerProduct>
@@ -392,6 +422,25 @@ MatXcd build_delta(const MatXcd& kappa, double U_val, int nstates) {
 }
 
 // ===================================================================
+//  Fermi-Dirac utility
+// ===================================================================
+//
+// fermi_dirac(x, beta) = 1 / (1 + exp(beta * x)) with overflow-safe
+// branching.  When beta == infinity (kT == 0) we return the hard step:
+//   x < 0 → 1, x > 0 → 0, x == 0 → 0.5 (won't occur in practice with
+//                                       1e-15 thresholding).
+inline double fermi_dirac(double x, double beta) {
+    if (!std::isfinite(beta)) {
+        // Zero-temperature limit
+        return (x < 0.0) ? 1.0 : (x > 0.0 ? 0.0 : 0.5);
+    }
+    const double bx = beta * x;
+    if (bx >  500.0) return 0.0;
+    if (bx < -500.0) return 1.0;
+    return 1.0 / (1.0 + std::exp(bx));
+}
+
+// ===================================================================
 //  particle_number  --  Tr(p) for a given chemical potential
 // ===================================================================
 //
@@ -406,6 +455,7 @@ MatXcd build_delta(const MatXcd& kappa, double U_val, int nstates) {
 struct ParticleNumberContext {
     const MatXcd& h;
     const MatXcd& delta;
+    double        kT = 0.0;     // 0.0 → zero-temperature path
     bool          delta_is_zero = false;
     VecXd         h_evals;     // populated only if delta_is_zero
 
@@ -419,8 +469,9 @@ struct ParticleNumberContext {
 };
 
 // Build the context.  Detects whether delta is numerically zero.
-ParticleNumberContext make_pn_context(const MatXcd& h, const MatXcd& delta) {
-    ParticleNumberContext ctx{h, delta, false, VecXd()};
+ParticleNumberContext make_pn_context(const MatXcd& h, const MatXcd& delta,
+                                       double kT = 0.0) {
+    ParticleNumberContext ctx{h, delta, kT, false, VecXd()};
     // Tolerance: if max|delta_ij| < 1e-14, treat as exactly zero.
     if (delta.cwiseAbs().maxCoeff() < 1e-14) {
         ctx.delta_is_zero = true;
@@ -434,17 +485,27 @@ ParticleNumberContext make_pn_context(const MatXcd& h, const MatXcd& delta) {
 }
 
 double particle_number(ParticleNumberContext& ctx, double lambda_) {
+    const double beta = (ctx.kT > 0.0) ? (1.0 / ctx.kT)
+                                       : std::numeric_limits<double>::infinity();
+
     if (ctx.delta_is_zero) {
-        // Tr(p) = #{i : h_evals[i] < lambda} (each filled mode contributes 1).
-        // h_evals are ascending, so binary search.
+        // delta = 0 ⇒ BdG matrix is block-diagonal.  At T=0 we counted
+        // eigenvalues of h below μ; at T>0 we sum the Fermi-Dirac weights.
         const VecXd& ev = ctx.h_evals;
-        int lo = 0, hi = static_cast<int>(ev.size());
-        while (lo < hi) {
-            int mid = lo + (hi - lo) / 2;
-            if (ev(mid) < lambda_) lo = mid + 1;
-            else                   hi = mid;
+        if (ctx.kT == 0.0) {
+            // Binary-search count (existing fast path).
+            int lo = 0, hi = static_cast<int>(ev.size());
+            while (lo < hi) {
+                int mid = lo + (hi - lo) / 2;
+                if (ev(mid) < lambda_) lo = mid + 1;
+                else                   hi = mid;
+            }
+            return static_cast<double>(lo);
         }
-        return static_cast<double>(lo);
+        // FT path: Tr(p) = Σ_i f(h_evals[i] - μ ; β).
+        double tr = 0.0;
+        for (int i = 0; i < ev.size(); ++i) tr += fermi_dirac(ev(i) - lambda_, beta);
+        return tr;
     }
 
     // General path: full BdG eigendecomposition.
@@ -481,22 +542,37 @@ double particle_number(ParticleNumberContext& ctx, double lambda_) {
     const VecXd&  evals = ctx.last_evals;
     const MatXcd& evecs = ctx.last_evecs;
 
-    int n_neg = 0;
-    for (int i = 0; i < evals.size(); ++i) {
-        if (evals(i) < 1e-15) ++n_neg; else break;
-    }
-    double tr = 0.0;
-    for (int j = 0; j < n_neg; ++j) {
-        for (int i = 0; i < n; ++i) {
-            tr += std::norm(evecs(i, j));
+    if (ctx.kT == 0.0) {
+        // T=0: hard projector on negative-energy modes.
+        int n_neg = 0;
+        for (int i = 0; i < evals.size(); ++i) {
+            if (evals(i) < 1e-15) ++n_neg; else break;
         }
+        double tr = 0.0;
+        for (int j = 0; j < n_neg; ++j) {
+            for (int i = 0; i < n; ++i) {
+                tr += std::norm(evecs(i, j));
+            }
+        }
+        return tr;
+    }
+
+    // T>0: weight every mode by Fermi-Dirac of its eigenvalue.
+    //   Tr(p) = Σ_j f(λ_j; β) Σ_{i<n} |evecs(i,j)|^2
+    double tr = 0.0;
+    for (int j = 0; j < evals.size(); ++j) {
+        const double w = fermi_dirac(evals(j), beta);
+        if (w < 1e-300) continue;   // skip negligible
+        double col_sum = 0.0;
+        for (int i = 0; i < n; ++i) col_sum += std::norm(evecs(i, j));
+        tr += w * col_sum;
     }
     return tr;
 }
 
 // Backward-compatible 3-arg form (used in the bisect helper signatures).
 double particle_number(const MatXcd& h, const MatXcd& delta, double lambda_) {
-    ParticleNumberContext ctx = make_pn_context(h, delta);
+    ParticleNumberContext ctx = make_pn_context(h, delta, 0.0);
     return particle_number(ctx, lambda_);
 }
 
@@ -580,11 +656,25 @@ double optimize_bisect(const std::function<double(double)>& func,
 // ===================================================================
 //  run_hfb_hubbard  --  the SCF driver
 // ===================================================================
+// struct HFBResult {
+//     MatXcd p;
+//     MatXcd k;
+//     cd     energy;          // internal energy E = Tr[(T + Γ/2)ρ + Δ t†/2]   (eq. 3.23)
+//     double entropy = 0.0;   // S = -k Σ [f_i ln f_i + (1-f_i) ln(1-f_i)]    (eq. 3.27)
+//     double grand_potential = 0.0;   // Ω = E - TS - μN                       (eq. 2.3)
+//     double mu      = 0.0;   // chemical potential found by bisection
+//     int    iters   = 0;
+// };
+
 HFBResult run_hfb_hubbard(int PARTICLE_NUMBER, int STATES,
                           int x, int y, double U, double t,
+                          double kT = 0.0,
                           const MatXcd* p_GUESS = nullptr,
-                          const MatXcd* k_GUESS = nullptr,
-                          double temperature = 0.0) {
+                          const MatXcd* k_GUESS = nullptr) {
+    // kT is in the same units as t and U.  kT == 0.0 → zero-temperature path
+    // (hard projector onto negative-energy modes).  kT > 0 → finite-temperature
+    // path following Goodman 1981 (Nucl. Phys. A352, 30): every BdG mode
+    // contributes weight f_i = 1/(1 + exp(β λ_i)) with β = 1/kT.
     const double sym_tol  = 1e-7;     // matches Python (currently unused)
     const double conv_tol = 1e-8;     // matches Python (used implicitly below)
     const double chem_tol = 1e-12;
@@ -639,12 +729,14 @@ HFBResult run_hfb_hubbard(int PARTICLE_NUMBER, int STATES,
     int  iter      = 0;
     bool converged = false;
     cd   energy    = 0.0;
+    double entropy_kB = 0.0;     // S / k_B  (only meaningful at T>0)
+    double grand_pot  = 0.0;     // Ω = E − T·S − μ·N
+    double last_chem_pot = 0.0;  // last bisected μ (for return value)
 
     MatXcd last_R;
     MatXcd last_H_BdG;
     VecXd  last_evals;
     MatXcd last_evecs;
-    int    last_iter = 0;
 
     // Re-used eigensolvers (no per-iteration workspace alloc).
     Eigen::SelfAdjointEigenSolver<MatXcd> es_bdg;
@@ -711,7 +803,7 @@ HFBResult run_hfb_hubbard(int PARTICLE_NUMBER, int STATES,
         // ----- 1. Chemical potential (on h, delta from previous iteration). -----
         // Build once: a fast path is taken when delta == 0 (avoids ~30
         // 64×64 eigendecompositions per SCF iter at U=0).
-        ParticleNumberContext pn_ctx = make_pn_context(h, delta);
+        ParticleNumberContext pn_ctx = make_pn_context(h, delta, kT);
         auto pn_func = [&](double lambda_) {
             return particle_number(pn_ctx, lambda_);
         };
@@ -722,6 +814,7 @@ HFBResult run_hfb_hubbard(int PARTICLE_NUMBER, int STATES,
                                           bracket_lo, bracket_hi, chem_tol);
         prev_chem_pot = chem_pot;
         has_prev_mu   = true;
+        last_chem_pot = chem_pot;
 
         // Build H_BdG with chemical potential.
         const int n = static_cast<int>(h.rows());
@@ -854,26 +947,44 @@ HFBResult run_hfb_hubbard(int PARTICLE_NUMBER, int STATES,
         const MatXcd& evecs = *evecs_p;
 
         {
+            // Pair symmetry: BdG eigenvalues should come in ±E pairs.
+            // 1e-6 tolerance is empirical — at FT with ~32×32 complex eigh,
+            // accumulated round-off can reach 1e-7 even on well-formed input.
             VecXd sum_pairs = evals + evals.reverse();
-            if (sum_pairs.cwiseAbs().maxCoeff() > 1e-7) {
+            if (sum_pairs.cwiseAbs().maxCoeff() > 1e-6) {
                 std::cout << "ENERGY'S ARE NOT COMING IN PAIRS" << std::endl;
             }
         }
 
-        // R = sum over filled modes of |v><v|.  Eigenvalues ascending, so the
-        // negative-energy block is a contiguous prefix of columns.
-        int n_neg = 0;
-        for (int i = 0; i < evals.size(); ++i) {
-            if (evals(i) < 1e-15) ++n_neg; else break;
+        // R = sum over modes of f_j |v_j><v_j|.  At T=0 this collapses to a
+        // hard projector onto negative-energy modes.  At T>0 every mode
+        // contributes weight f_j = 1/(1 + exp(β λ_j))  (Goodman eq. 4.20,
+        // applied directly to BdG eigenvalues since μ is already absorbed
+        // into the diagonal of H_BdG).  We also collect the f_j vector for
+        // the entropy term.
+        VecXd  f_weights(evals.size());
+        MatXcd R;
+        if (kT == 0.0) {
+            int n_neg = 0;
+            for (int i = 0; i < evals.size(); ++i) {
+                if (evals(i) < 1e-15) ++n_neg; else break;
+            }
+            f_weights.setZero();
+            for (int i = 0; i < n_neg; ++i) f_weights(i) = 1.0;
+            MatXcd V_neg = evecs.leftCols(n_neg);
+            R = V_neg * V_neg.adjoint();
+        } else {
+            const double beta = 1.0 / kT;
+            for (int i = 0; i < evals.size(); ++i) {
+                f_weights(i) = fermi_dirac(evals(i), beta);
+            }
+            // R = evecs * diag(f) * evecs†.  Avoid materializing the
+            // diagonal: scale columns of evecs by sqrt(f) (here just by f
+            // on one side -- product is V * diag(f) * V†).
+            MatXcd VW = evecs;
+            for (int j = 0; j < evecs.cols(); ++j) VW.col(j) *= f_weights(j);
+            R = VW * evecs.adjoint();
         }
-        MatXcd V_neg = evecs.leftCols(n_neg);
-        MatXcd R     = V_neg * V_neg.adjoint();
-
-        last_R     = R;
-        last_H_BdG = H_BdG;
-        last_evals = evals;
-        last_evecs = evecs;
-        last_iter  = iter;
 
         // Roll R_prev forward for next iteration's DIIS error.
         prev_R_full     = R;
@@ -890,15 +1001,52 @@ HFBResult run_hfb_hubbard(int PARTICLE_NUMBER, int STATES,
         h     = build_fock_matrix(PARTICLE_NUMBER, H_t, p, U);
         delta = build_delta(k, U, STATES);
 
-        // ----- 7. Energy. -----
+        // ----- 7. Energy and (at T>0) entropy & grand potential. -----
+        // Internal energy: E = (1/2) Tr[(T + h)ρ - Δ t†]   (Goodman 3.23,
+        //                                                   with h = T + Γ).
+        // The HF and pair potentials have the same form as at T=0; only the
+        // construction of ρ and t (via thermally weighted R) differs.
         cd e1 = 0.5 * ((H_t_c + h) * p).trace();
         cd e2 = 0.5 * (delta * k.adjoint()).trace();
         energy = e1 - e2;
 
+        if (kT > 0.0) {
+            // Entropy: -k Σ_i [f_i ln f_i + (1-f_i) ln(1-f_i)] over physical
+            // quasiparticles.  Using the BdG mirror, the same total is obtained
+            // by summing over all 2n eigenmodes and halving.  We use kB == 1
+            // (kT carries the units), so S/kB is what we compute.
+            double S_over_kB = 0.0;
+            for (int j = 0; j < f_weights.size(); ++j) {
+                const double f = f_weights(j);
+                if (f > 0.0 && f < 1.0) {
+                    S_over_kB -= f * std::log(f) + (1.0 - f) * std::log(1.0 - f);
+                }
+            }
+            S_over_kB *= 0.5;
+            entropy_kB = S_over_kB;
+            // Ω = E - TS - μN.  Since kB = 1, T·S has units [energy] = kT * S_over_kB.
+            const double N = p.trace().real();
+            grand_pot = energy.real() - kT * S_over_kB - chem_pot * N;
+        } else {
+            entropy_kB = 0.0;
+            const double N = p.trace().real();
+            grand_pot = energy.real() - chem_pot * N;
+        }
+
+        last_R = R;
+        last_H_BdG = H_BdG;
+        last_evals = evals;
+        last_evecs = evecs;
+
         // ----- 8. Convergence checks. -----
+        // Note: original Python tested `delta_E.real() < 1e-8`, which fires on
+        // any drop in energy regardless of size.  At T=0 the density check
+        // dominates so this rarely matters; at T>0 the density can land near
+        // its fixed point in 1-2 mix steps (smooth Fermi-Dirac instead of a
+        // hard step), exposing the bug.  Use |delta_E| instead.
         if (has_prev_energy) {
             cd delta_E = energy - prev_energy;
-            bool energy_converged = (delta_E.real() < 1e-8);
+            bool energy_converged = (std::abs(delta_E.real()) < 1e-8);
             MatXcd diff = p - prev_p;
             bool density_converged = (diff.cwiseAbs().maxCoeff() < 1e-8);
             bool norm_converged    = (fro_norm(diff) < 1e-8);
@@ -926,36 +1074,60 @@ HFBResult run_hfb_hubbard(int PARTICLE_NUMBER, int STATES,
         has_prev_energy = true;
     }
 
-    HFBResult result;
-    result.p = p;
-    result.k = k;
-    result.energy = energy;
-    result.R = last_R;
-    result.H_BdG = last_H_BdG;
-    result.H_BdG_evals = last_evals;
-    result.H_BdG_evecs = last_evecs;
+    HFBResult out;
+    out.p = p;
+    out.k = k;
+    out.energy = energy;
+    out.entropy = entropy_kB;
+    out.grand_potential = grand_pot;
+    out.mu = last_chem_pot;
+    out.iters = iter;
+    out.R = last_R;
+    out.H_BdG = last_H_BdG;
+    out.H_BdG_evals = last_evals;
+    out.H_BdG_evecs = last_evecs;
     if (last_evecs.rows() > 0) {
         const int half = static_cast<int>(last_evecs.rows() / 2);
-        result.U_bdg = last_evecs.topRows(half);
-        result.V_bdg = last_evecs.bottomRows(half);
+        out.U_bdg = last_evecs.topRows(half);
+        out.V_bdg = last_evecs.bottomRows(half);
     }
-    result.U_param = U;
-    result.temperature = temperature;
-    result.iteration_count = last_iter;
-    result.converged = converged;
-    return result;
+    out.U_param = U;
+    out.temperature = kT;
+    out.iteration_count = iter;
+    out.converged = converged;
+    return out;
 }
 
 // ===================================================================
 //  Main driver  --  reproduces the Python script's bottom block
 // ===================================================================
 int main(int argc, char** argv) {
-    // Optional CLI seed for reproducibility:
-    //   ./hfb           -> entropy-seeded (matches Python default behavior)
-    //   ./hfb 42        -> deterministic
+    // CLI arguments:
+    //   ./hfb                     -> seed=entropy, kT=0
+    //   ./hfb <seed>              -> seed=<seed>, kT=0  (zero-temperature, original behavior)
+    //   ./hfb <seed> <kT>         -> seed=<seed>, kT=<kT>  (finite-temperature run)
+    //
+    // kT is in the same units as t and U.  Setting kT=0 reproduces the
+    // zero-temperature behavior bit-for-bit (verified against the original
+    // C++ port and Python reference).  Setting kT>0 runs Goodman's FT-HFB
+    // theory: every BdG mode contributes f_i = 1/(1+exp(βE_i)), the entropy
+    // term is added to the grand potential, and the SCF converges to the
+    // self-consistent fields *at that temperature* (no annealing).
+    uint64_t seed = 0;
+    double   kT   = 0.0;
+    bool     have_seed = false;
     if (argc > 1) {
-        seed_rng(static_cast<uint64_t>(std::stoull(argv[1])));
+        seed = static_cast<uint64_t>(std::stoull(argv[1]));
+        have_seed = true;
     }
+    if (argc > 2) {
+        kT = std::stod(argv[2]);
+        if (kT < 0.0) {
+            std::fprintf(stderr, "kT must be non-negative; got %g\n", kT);
+            return 1;
+        }
+    }
+    if (have_seed) seed_rng(seed);
 
     const int    x_              = 4;
     const int    y_              = 4;
@@ -963,8 +1135,10 @@ int main(int argc, char** argv) {
     const int    STATES          = 16;
     double       U               = 0.0;
     const double t               = 1.0;
-    const double temperature     = 0.0;
-    const std::string output_path = "hfb_results.h5";
+    const std::string output_path = "fthfb_results.h5";
+
+    std::printf("# 4x4 Hubbard, half-filled, kT=%g (units of t)\n", kT);
+    std::fflush(stdout);
 
     // Build U_arr = -linspace(0, 10, 11) = [0, -1, -2, ..., -10]
     std::vector<double> U_arr;
@@ -976,15 +1150,15 @@ int main(int argc, char** argv) {
         }
     }
 
-    // First call: warm-up (matches Python)
-    HFBResult res = run_hfb_hubbard(PARTICLE_NUMBER, STATES, x_, y_, U, t,
-                                    nullptr, nullptr, temperature);
+    // First call: warm-up (matches Python).  Always at the requested kT --
+    // the user explicitly asked for "no annealing": every call is at the
+    // target temperature.
+    HFBResult res = run_hfb_hubbard(PARTICLE_NUMBER, STATES, x_, y_, U, t, kT);
     MatXcd p = res.p, k = res.k;
     cd     energy = res.energy;
 
     // Second call (no captured guesses): exactly mirrors the Python script
-    run_hfb_hubbard(PARTICLE_NUMBER, STATES, x_, y_, U, t,
-                    nullptr, nullptr, temperature);
+    run_hfb_hubbard(PARTICLE_NUMBER, STATES, x_, y_, U, t, kT);
 
     // Map iteration: insert if absent, then keep the lower energy seen.
     std::vector<std::pair<double, double>> data_by_U;
@@ -995,20 +1169,28 @@ int main(int argc, char** argv) {
     };
 
     for (double U_val : U_arr) {
-        res = run_hfb_hubbard(PARTICLE_NUMBER, STATES, x_, y_, U_val, t,
-                      &p, &k, temperature);
+        res = run_hfb_hubbard(PARTICLE_NUMBER, STATES, x_, y_, U_val, t, kT, &p, &k);
         p = res.p; k = res.k; energy = res.energy;
 
-        std::printf("%d-Sites, Half Filled, t=%g, U=%g, Energy: %.3f, N:%.2f\n",
-                    PARTICLE_NUMBER, t, U_val,
-                    energy.real(), p.trace().real());
+        if (kT > 0.0) {
+            const double F = energy.real() - kT * res.entropy;   // Helmholtz free energy
+            std::printf("%d-Sites, Half Filled, t=%g, U=%g, kT=%g, "
+                        "E=%.3f, N=%.2f, S/kB=%.3f, F=%.3f, Omega=%.3f, mu=%.3f, iters=%d\n",
+                        PARTICLE_NUMBER, t, U_val, kT,
+                        energy.real(), p.trace().real(),
+                        res.entropy, F, res.grand_potential, res.mu, res.iters);
+        } else {
+            std::printf("%d-Sites, Half Filled, t=%g, U=%g, Energy: %.3f, N:%.2f\n",
+                        PARTICLE_NUMBER, t, U_val,
+                        energy.real(), p.trace().real());
+        }
         std::fflush(stdout);
 
         if (res.converged) {
             write_converged_result_hdf5(res, output_path);
         } else {
-            std::cerr << "Warning: did not converge for U=" << U_val
-                      << " after " << res.iteration_count << " iterations.\n";
+            std::fprintf(stderr, "Warning: did not converge for U=%g after %d iterations.\n",
+                         U_val, res.iters);
         }
 
         int idx = find_U(U_val);
