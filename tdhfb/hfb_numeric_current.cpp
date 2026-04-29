@@ -1,10 +1,4 @@
-// hfb_numeric_current.cpp
-//
-// C++ translation of hfb_numeric_current.py
-//
-// Hartree-Fock-Bogoliubov calculation on the 2D Hubbard model.
-// Logic mirrors the Python implementation as closely as practical.
-//
+
 // Build:
 //   g++ -O3 -march=native -DNDEBUG -DEIGEN_NO_DEBUG -std=c++17 -I/usr/include/eigen3 \
 //       hfb_numeric_current.cpp data_output.cpp -o hfb -lhdf5

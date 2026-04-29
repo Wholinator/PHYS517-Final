@@ -126,12 +126,7 @@ int main(int argc, char** argv) {
     std::printf("================================================================\n");
     std::fflush(stdout);
 
-    // -----------------------------------------------------------------
-    // Phase 1.  Ground state.  We do TWO HFB warm-up calls (the original
-    // C++ driver did this) to mimic the Python script's behavior of
-    // discarding the first noisy random initialization.  Then a final
-    // call seeded with the warm-up's (p, k) gives the production state.
-    // -----------------------------------------------------------------
+
     std::printf("[hfb]  warming up ground state...\n"); std::fflush(stdout);
     HFBResult warm = run_hfb_hubbard(a.N, STATES, a.x, a.y, /*U=*/0.0, a.t,
                                      nullptr, nullptr, /*temperature=*/0.0);

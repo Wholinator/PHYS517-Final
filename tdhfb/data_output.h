@@ -69,7 +69,7 @@ struct TDHFBResult {
 
     // Strength function S(E; F)  computed from damped FT of (F_real + i F_imag)
     std::vector<double> E_grid;
-    std::vector<double> S_E;              // -Im f(E) / (π η)
+    std::vector<double> S_E;              // -Im f(E) / (pi eta)
     std::vector<double> f_real;           // Re f(E),  for diagnostics
     std::vector<double> f_imag;           // Im f(E),  for diagnostics
 
@@ -105,13 +105,13 @@ void write_tdhfb_result_hdf5(const TDHFBResult& res, const std::string& path);
 // ===================================================================
 struct TDHFBQuenchResult {
     // Per-step diagnostics (recorded every step)
-    std::vector<double> tau;               // imaginary time τ
+    std::vector<double> tau;               // imaginary time taiu
     std::vector<double> energy;            // E(τ), should decrease monotonically
     std::vector<double> particle_number;   // Tr(ρ), should stay ≈ N
-    std::vector<double> idempotency_err;   // ‖R²−R‖_F, should be ≈ 0 after purify
-    std::vector<double> hermiticity_err;   // ‖R−R†‖_F
-    std::vector<double> pairing_gap;       // (1/N) Σ_i |κ_{i,i+N}|
-    std::vector<double> mu_history;        // μ(τ)
+    std::vector<double> idempotency_err;   // ||R²−R||_F, should be ≈ 0 after purify
+    std::vector<double> hermiticity_err;   // ||R−R†||_F
+    std::vector<double> pairing_gap;       // (1/N) Σ_i |k_{i,i+N}|
+    std::vector<double> mu_history;        // mu(tau)
     std::vector<double> kinetic_energy;
     std::vector<double> interaction_energy;
 

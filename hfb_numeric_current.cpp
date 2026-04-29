@@ -1,10 +1,3 @@
-// hfb_numeric_current.cpp
-//
-// C++ translation of hfb_numeric_current.py
-//
-// Hartree-Fock-Bogoliubov calculation on the 2D Hubbard model.
-// Logic mirrors the Python implementation as closely as practical.
-//
 // Build:
 //   g++ -O3 -march=native -DNDEBUG -DEIGEN_NO_DEBUG -std=c++17 -I/usr/include/eigen3 \
 //       hfb_numeric_current.cpp data_output.cpp -o hfb -lhdf5
@@ -32,11 +25,6 @@ using MatXd  = Eigen::MatrixXd;
 using MatXcd = Eigen::MatrixXcd;
 using VecXd  = Eigen::VectorXd;
 
-// ===================================================================
-//  Random-number infrastructure
-// ===================================================================
-//
-// We keep one std::mt19937 here and document the call sites.
 
 static std::mt19937 g_rng{std::random_device{}()};
 
@@ -66,17 +54,10 @@ inline VecXd uniform_vector(int n) {
     return v;
 }
 
-// ===================================================================
-//  Small helpers (NumPy parity)
-// ===================================================================
-
-// np.eye(n) as complex
 inline MatXcd eye_c(int n) { return MatXcd::Identity(n, n); }
 
-// np.eye(n) as real
 inline MatXd eye_r(int n) { return MatXd::Identity(n, n); }
 
-// scipy.linalg.block_diag for two square blocks A, B
 template <typename M>
 M block_diag2(const M& A, const M& B) {
     M out = M::Zero(A.rows() + B.rows(), A.cols() + B.cols());
@@ -97,7 +78,6 @@ M block2x2(const M& A, const M& B, const M& C, const M& D) {
     return out;
 }
 
-// np.roll on a 1D vector (positive shift = shift right, wraparound).
 template <typename V>
 V roll(const V& v, int shift) {
     const int n = static_cast<int>(v.size());
@@ -107,7 +87,6 @@ V roll(const V& v, int shift) {
     return out;
 }
 
-// np.diag(vector): turn a vector into a diagonal matrix.
 template <typename V>
 auto diag_from_vec(const V& v) {
     using Scalar = typename V::Scalar;
@@ -118,20 +97,11 @@ auto diag_from_vec(const V& v) {
     return M;
 }
 
-// Sum of a vector (np.sum)
 template <typename V>
 typename V::Scalar sum_vec(const V& v) { return v.sum(); }
 
-// Frobenius norm difference (np.linalg.norm(... , 'fro'))
 inline double fro_norm(const MatXcd& A) { return A.norm(); }
 
-// ===================================================================
-//  purify_evals  (predicate version only -- the lambda case)
-// ===================================================================
-//
-// Project a Hermitian matrix's eigenvalues onto values allowed by a
-// predicate.  The discrete branch is unused in the main pipeline,
-// so we omit it here.
 
 MatXd purify_evals_predicate(const std::function<bool(double)>& is_allowed,
                              const MatXd&                       mat,
@@ -197,13 +167,6 @@ bool is_positive_semidefinite(const MatXd& a, double atol = 1e-10, double /*rtol
 // ===================================================================
 //  init_rho  --  initial density matrix
 // ===================================================================
-//
-// The Python signature uses several optional flags.  Only the configuration
-// actually called by run_hfb_hubbard is exercised in the main loop:
-//     restriction="G", anti=True, offdiag_rn=True, spin_mix=True,
-//     diag_rn=False (default), per_tol=1e-3 (default).
-// We support the full flag set anyway, mirroring the Python branches.
-
 enum class Restriction { R, U, G };
 
 MatXd init_rho(int  block_dim,
@@ -228,16 +191,9 @@ MatXd init_rho(int  block_dim,
         const double tr = mat.trace();
         const double mult_factor = diagval / tr;
         // mult_factor_mat = ones((2d,2d)) + (mult_factor - 1) * eye(2d)
-        // mat * mult_factor_mat is element-wise: off-diagonals kept,
-        // diagonal scaled by mult_factor.  But mat is diagonal here, so
-        // the result is just mat * mult_factor on the diagonal.
-        rho = MatXd::Zero(2 * dim, 2 * dim);
-        for (int i = 0; i < 2 * dim; ++i) rho(i, i) = mat(i, i) * mult_factor;
-        // (off-diagonals of mat are zero, so no other contribution)
 
-        // To exactly reproduce the Python expression for non-diagonal mat,
-        // we'd need element-wise mat * mult_factor_mat; mat is diagonal, so
-        // the above shortcut is identical here.
+        for (int i = 0; i < 2 * dim; ++i) rho(i, i) = mat(i, i) * mult_factor;
+
     } else if (!anti) {
         MatXd p1 = (diagval / block_dim) * MatXd::Identity(block_dim, block_dim);
         MatXd p2 = MatXd::Zero(block_dim, block_dim);
@@ -262,8 +218,7 @@ MatXd init_rho(int  block_dim,
         MatXd one_minus_eye = MatXd::Ones(block_dim, block_dim) - MatXd::Identity(block_dim, block_dim);
         off1 = (off1.array() * one_minus_eye.array()).matrix();
         off2 = (off2.array() * one_minus_eye.array()).matrix();
-        // NB: element-wise A*A.T (not A @ A.T) — does not produce a
-        // Hermitian matrix in general, but matches the intended behavior.
+
         off1 = 0.5 * (off1.array() * off1.transpose().array()).matrix();
         off2 = 0.5 * (off2.array() * off2.transpose().array()).matrix();
         rho += block_diag2<MatXd>(off1, off2);
@@ -294,10 +249,6 @@ MatXd init_rho(int  block_dim,
 // ===================================================================
 //  init_hfb_kappa  --  initial anomalous density
 // ===================================================================
-//
-// The Python version uses a *separate* default_rng() seeded by entropy
-// (independent of the global RNG).  We use the same global RNG here for
-// simplicity; this changes the specific samples but not the algorithm.
 
 MatXd init_hfb_kappa(int STATES, double eps = 1.0) {
     MatXd r = randn_matrix(STATES * 2, STATES * 2);
@@ -357,8 +308,6 @@ MatXd build_t_mat_hubbard(int x, int y, double t, bool pbc) {
     return (-t) * kron;
 }
 
-// build_fock_matrix:  H_U is U * diag( roll(diag(p), roll_by) ) added to t_mat.
-// In Python, p may be complex with a tiny imaginary part; here p is complex.
 MatXcd build_fock_matrix(int roll_by, const MatXd& t_mat, const MatXcd& p, double U_val) {
     Eigen::VectorXcd diag_p = p.diagonal();
     Eigen::VectorXcd rolled = roll(diag_p, roll_by);
@@ -372,8 +321,6 @@ MatXcd build_fock_matrix(int roll_by, const MatXd& t_mat, const MatXcd& p, doubl
 //  Delta builder (anomalous mean field)
 // ===================================================================
 MatXcd build_delta(const MatXcd& kappa, double U_val, int nstates) {
-    // Mask to on-site off-diagonal elements (i, i+nstates) only, then
-    // transpose and scale:  delta = 2*U_val * masked.T
     const int N = nstates * 2;
     MatXcd masked = MatXcd::Zero(N, N);
     // hubbard_k_map has 1s only at (i, i+nstates) and (i+nstates, i).
@@ -388,15 +335,6 @@ MatXcd build_delta(const MatXcd& kappa, double U_val, int nstates) {
 // ===================================================================
 //  particle_number  --  Tr(p) for a given chemical potential
 // ===================================================================
-//
-// The chemical-potential bisection inside the SCF loop calls this
-// dozens of times per SCF iteration with a fixed (h, delta) and varying
-// μ.  When delta == 0 (in particular at U == 0, where the BdG matrix
-// block-decouples), Tr(p) reduces to "count eigenvalues of h below μ".
-// We exploit this: the caller pre-computes the eigenvalues of h once and
-// passes them in; each particle_number call is then an O(n) count rather
-// than an O(n^3) eigendecomposition.  This makes the U=0 warm-up calls
-// (which dominate runtime) nearly free.
 struct ParticleNumberContext {
     const MatXcd& h;
     const MatXcd& delta;
@@ -404,7 +342,7 @@ struct ParticleNumberContext {
     VecXd         h_evals;     // populated only if delta_is_zero
 
     // Cache of the most recent full BdG eigendecomposition produced inside
-    // particle_number().  After optimize_bisect() finds μ, the SCF loop can
+    // particle_number().  After optimize_bisect() finds lzmbda, the SCF loop can
     // pull these out and avoid one redundant eigendecomp per iteration.
     bool   last_evals_valid = false;
     double last_lambda       = 0.0;
@@ -589,14 +527,10 @@ HFBResult run_hfb_hubbard(int PARTICLE_NUMBER, int STATES,
     if (p_GUESS != nullptr && p_GUESS->size() > 0) {
         p = *p_GUESS;
     } else {
-        // init_rho(PARTICLE_NUMBER, PARTICLE_NUMBER, "G", anti=True,
-        //          offdiag_rn=True, spin_mix=True)
-        // NOTE: in Python, init_rho's first arg is block_dim; the call passes
-        // PARTICLE_NUMBER for both block_dim and diagval.  We replicate that.
         MatXd p_real = init_rho(PARTICLE_NUMBER, PARTICLE_NUMBER,
                                 Restriction::G,
-                                /*diag_rn=*/false, /*offdiag_rn=*/true,
-                                /*spin_mix=*/true, /*anti=*/true);
+                                false, true,
+                                true, true);
         p = p_real.cast<cd>();
     }
 
@@ -608,7 +542,7 @@ HFBResult run_hfb_hubbard(int PARTICLE_NUMBER, int STATES,
     }
 
     // ----- Density / anomalous fields -----
-    MatXd  H_t   = build_t_mat_hubbard(x, y, t, /*pbc=*/true);
+    MatXd  H_t   = build_t_mat_hubbard(x, y, t, true);
     MatXcd H_t_c = H_t.cast<cd>();   // cached complex cast
     MatXcd h     = build_fock_matrix(STATES, H_t, p, U);
     MatXcd delta = build_delta(k, U, STATES);
@@ -655,13 +589,6 @@ HFBResult run_hfb_hubbard(int PARTICLE_NUMBER, int STATES,
     // DIIS state.  We extrapolate the BdG Hamiltonian H_BdG,
     // not R.  Error vector is e = [H_BdG, R_prev] (current H against
     // previous R), evaluated immediately after H_BdG is built.
-    //
-    // Lifecycle:
-    //   * Iters 1..DIIS_WARMUP_NOSTORE: don't compute or store residuals.
-    //   * After warm-up: compute & store every iteration, FIFO-evict from
-    //     the front to keep at most DIIS_WINDOW entries.
-    //   * Activation: ||e||_F < DIIS_START AND queue size >= DIIS_MIN_QUEUE.
-    //   * Deactivation: ||e||_F < DIIS_STOP.  Storage continues.
     const size_t DIIS_WINDOW = 4;
     const double DIIS_START  = 1e-5;
     const double DIIS_STOP   = 1e-9;
@@ -687,13 +614,7 @@ HFBResult run_hfb_hubbard(int PARTICLE_NUMBER, int STATES,
     MatXcd prev_R_full;             // last full BdG density (4*STATES x 4*STATES)
     bool   has_prev_R_full = false;
 
-    // DIIS warm-up & queue policy:
-    //   * Iterations 1..DIIS_WARMUP_NOSTORE: don't even compute residuals.
-    //   * From DIIS_WARMUP_NOSTORE+1 onward: compute & store residuals,
-    //     popping from the front to keep the queue at <= DIIS_WINDOW.
-    //   * Activation requires queue size >= DIIS_MIN_QUEUE *and*
-    //     ||e||_F < DIIS_START.  Once active, deactivate when ||e||_F
-    //     drops below DIIS_STOP.  History continues to roll regardless.
+
     const int    DIIS_WARMUP_NOSTORE = 4;     // skip the first N iters entirely
     const size_t DIIS_MIN_QUEUE      = 4;     // need this many before extrapolating
     // (DIIS_WINDOW, DIIS_START, DIIS_STOP defined above near other DIIS state)
@@ -723,11 +644,7 @@ HFBResult run_hfb_hubbard(int PARTICLE_NUMBER, int STATES,
         MatXcd h_shift = h - chem_pot * I;
         MatXcd H_BdG = block2x2<MatXcd>(h_shift, delta,
                                         -delta.conjugate(), -h_shift.transpose());
-        // ----- 2. DIIS error = [H_BdG_current, R_previous]. -----
-        // R_prev was produced by diagonalizing the previous H_BdG.  At the
-        // SCF fixed point H and R commute, so [H^{(n)}, R^{(n-1)}] -> 0.
-        // Until then it's a genuine residual.  Skip entirely during warm-up
-        // (or if we don't yet have a previous R).
+
         bool past_warmup = (iter > DIIS_WARMUP_NOSTORE);
         double err_norm = std::numeric_limits<double>::infinity();
         if (past_warmup && has_prev_R_full) {
