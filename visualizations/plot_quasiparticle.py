@@ -21,6 +21,30 @@ def _infer_grid(N: int, nx: int, ny: int) -> tuple:
     return root, root
 
 
+def _parse_group_selector(u_arg: str, temp_arg: str) -> tuple:
+    u_group = u_arg
+    u_value = None
+    if u_arg is not None:
+        try:
+            u_value = float(u_arg)
+        except ValueError:
+            pass
+        else:
+            u_group = None
+
+    temperature = temp_arg
+    temp_value = None
+    if temp_arg is not None:
+        try:
+            temp_value = float(temp_arg)
+        except ValueError:
+            pass
+        else:
+            temperature = None
+
+    return u_group, u_value, temperature, temp_value
+
+
 def qp_density_from_uv(U: np.ndarray, V: np.ndarray, idx: int) -> np.ndarray:
     # U,V are (2Ns) x (2Ns*?) with columns as eigenvectors
     if U.ndim != 2 or V.ndim != 2:
@@ -44,7 +68,7 @@ def qp_density_from_uv(U: np.ndarray, V: np.ndarray, idx: int) -> np.ndarray:
 
 def main():
     p = argparse.ArgumentParser()
-    p.add_argument('--file', required=True)
+    p.add_argument('--file', default='build/hfb_results.h5')
     p.add_argument('--u', default=None)
     p.add_argument('--temperature', default=None)
     p.add_argument('--group', default=None)
@@ -53,7 +77,19 @@ def main():
     p.add_argument('--ny', type=int, default=None)
     args = p.parse_args()
 
-    res = load_result(args.file, args.u, temperature=args.temperature, group_path=args.group)
+    group_path = args.group
+    if group_path is not None and group_path.startswith('results/'):
+        group_path = group_path.split('results/', 1)[1]
+
+    u_group, u_value, temperature, temp_value = _parse_group_selector(args.u, args.temperature)
+    res = load_result(
+        args.file,
+        u_group=u_group,
+        temperature=temperature,
+        group_path=group_path,
+        u_value=u_value,
+        temp_value=temp_value,
+    )
     if 'U_bdg' not in res or 'V_bdg' not in res:
         raise KeyError('U_bdg and V_bdg not found in result')
     U = res['U_bdg']
