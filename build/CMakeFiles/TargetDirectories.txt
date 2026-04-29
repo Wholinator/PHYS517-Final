@@ -1,4 +1,6 @@
 /home/wholinator/repos/PHYS517-proj/build/CMakeFiles/hfb.dir
 /home/wholinator/repos/PHYS517-proj/build/CMakeFiles/fthfb.dir
+/home/wholinator/repos/PHYS517-proj/build/CMakeFiles/tdhfb.dir
+/home/wholinator/repos/PHYS517-proj/build/CMakeFiles/tdhfb_quench.dir
 /home/wholinator/repos/PHYS517-proj/build/CMakeFiles/edit_cache.dir
 /home/wholinator/repos/PHYS517-proj/build/CMakeFiles/rebuild_cache.dir

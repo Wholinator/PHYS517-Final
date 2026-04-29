@@ -1,0 +1,74 @@
+[
+{
+  "directory": "/home/wholinator/repos/PHYS517-proj/build",
+  "command": "/usr/bin/c++  -I/usr/include/hdf5/serial -isystem /usr/include/eigen3  -O3 -march=native -DNDEBUG -DEIGEN_NO_DEBUG -O3 -DNDEBUG -std=gnu++17 -o CMakeFiles/hfb.dir/hfb_numeric_current.cpp.o -c /home/wholinator/repos/PHYS517-proj/hfb_numeric_current.cpp",
+  "file": "/home/wholinator/repos/PHYS517-proj/hfb_numeric_current.cpp",
+  "output": "CMakeFiles/hfb.dir/hfb_numeric_current.cpp.o"
+},
+{
+  "directory": "/home/wholinator/repos/PHYS517-proj/build",
+  "command": "/usr/bin/c++  -I/usr/include/hdf5/serial -isystem /usr/include/eigen3  -O3 -march=native -DNDEBUG -DEIGEN_NO_DEBUG -O3 -DNDEBUG -std=gnu++17 -o CMakeFiles/hfb.dir/data_output.cpp.o -c /home/wholinator/repos/PHYS517-proj/data_output.cpp",
+  "file": "/home/wholinator/repos/PHYS517-proj/data_output.cpp",
+  "output": "CMakeFiles/hfb.dir/data_output.cpp.o"
+},
+{
+  "directory": "/home/wholinator/repos/PHYS517-proj/build",
+  "command": "/usr/bin/c++  -I/usr/include/hdf5/serial -isystem /usr/include/eigen3  -O3 -march=native -DNDEBUG -DEIGEN_NO_DEBUG -O3 -DNDEBUG -std=gnu++17 -o CMakeFiles/fthfb.dir/fthfb/fthfb_numeric.cpp.o -c /home/wholinator/repos/PHYS517-proj/fthfb/fthfb_numeric.cpp",
+  "file": "/home/wholinator/repos/PHYS517-proj/fthfb/fthfb_numeric.cpp",
+  "output": "CMakeFiles/fthfb.dir/fthfb/fthfb_numeric.cpp.o"
+},
+{
+  "directory": "/home/wholinator/repos/PHYS517-proj/build",
+  "command": "/usr/bin/c++  -I/usr/include/hdf5/serial -isystem /usr/include/eigen3  -O3 -march=native -DNDEBUG -DEIGEN_NO_DEBUG -O3 -DNDEBUG -std=gnu++17 -o CMakeFiles/fthfb.dir/fthfb/data_output.cpp.o -c /home/wholinator/repos/PHYS517-proj/fthfb/data_output.cpp",
+  "file": "/home/wholinator/repos/PHYS517-proj/fthfb/data_output.cpp",
+  "output": "CMakeFiles/fthfb.dir/fthfb/data_output.cpp.o"
+},
+{
+  "directory": "/home/wholinator/repos/PHYS517-proj/build",
+  "command": "/usr/bin/c++  -I/usr/include/hdf5/serial -isystem /usr/include/eigen3  -O3 -march=native -DNDEBUG -DEIGEN_NO_DEBUG -O3 -DNDEBUG -std=gnu++17 -o CMakeFiles/tdhfb.dir/tdhfb/tdhfb_main.cpp.o -c /home/wholinator/repos/PHYS517-proj/tdhfb/tdhfb_main.cpp",
+  "file": "/home/wholinator/repos/PHYS517-proj/tdhfb/tdhfb_main.cpp",
+  "output": "CMakeFiles/tdhfb.dir/tdhfb/tdhfb_main.cpp.o"
+},
+{
+  "directory": "/home/wholinator/repos/PHYS517-proj/build",
+  "command": "/usr/bin/c++  -I/usr/include/hdf5/serial -isystem /usr/include/eigen3  -O3 -march=native -DNDEBUG -DEIGEN_NO_DEBUG -O3 -DNDEBUG -std=gnu++17 -o CMakeFiles/tdhfb.dir/tdhfb/tdhfb.cpp.o -c /home/wholinator/repos/PHYS517-proj/tdhfb/tdhfb.cpp",
+  "file": "/home/wholinator/repos/PHYS517-proj/tdhfb/tdhfb.cpp",
+  "output": "CMakeFiles/tdhfb.dir/tdhfb/tdhfb.cpp.o"
+},
+{
+  "directory": "/home/wholinator/repos/PHYS517-proj/build",
+  "command": "/usr/bin/c++  -I/usr/include/hdf5/serial -isystem /usr/include/eigen3  -O3 -march=native -DNDEBUG -DEIGEN_NO_DEBUG -O3 -DNDEBUG -std=gnu++17 -o CMakeFiles/tdhfb.dir/tdhfb/hfb_numeric_current.cpp.o -c /home/wholinator/repos/PHYS517-proj/tdhfb/hfb_numeric_current.cpp",
+  "file": "/home/wholinator/repos/PHYS517-proj/tdhfb/hfb_numeric_current.cpp",
+  "output": "CMakeFiles/tdhfb.dir/tdhfb/hfb_numeric_current.cpp.o"
+},
+{
+  "directory": "/home/wholinator/repos/PHYS517-proj/build",
+  "command": "/usr/bin/c++  -I/usr/include/hdf5/serial -isystem /usr/include/eigen3  -O3 -march=native -DNDEBUG -DEIGEN_NO_DEBUG -O3 -DNDEBUG -std=gnu++17 -o CMakeFiles/tdhfb.dir/tdhfb/data_output.cpp.o -c /home/wholinator/repos/PHYS517-proj/tdhfb/data_output.cpp",
+  "file": "/home/wholinator/repos/PHYS517-proj/tdhfb/data_output.cpp",
+  "output": "CMakeFiles/tdhfb.dir/tdhfb/data_output.cpp.o"
+},
+{
+  "directory": "/home/wholinator/repos/PHYS517-proj/build",
+  "command": "/usr/bin/c++  -I/usr/include/hdf5/serial -isystem /usr/include/eigen3  -O3 -march=native -DNDEBUG -DEIGEN_NO_DEBUG -O3 -DNDEBUG -std=gnu++17 -o CMakeFiles/tdhfb_quench.dir/tdhfb/tdhfb_quench_main.cpp.o -c /home/wholinator/repos/PHYS517-proj/tdhfb/tdhfb_quench_main.cpp",
+  "file": "/home/wholinator/repos/PHYS517-proj/tdhfb/tdhfb_quench_main.cpp",
+  "output": "CMakeFiles/tdhfb_quench.dir/tdhfb/tdhfb_quench_main.cpp.o"
+},
+{
+  "directory": "/home/wholinator/repos/PHYS517-proj/build",
+  "command": "/usr/bin/c++  -I/usr/include/hdf5/serial -isystem /usr/include/eigen3  -O3 -march=native -DNDEBUG -DEIGEN_NO_DEBUG -O3 -DNDEBUG -std=gnu++17 -o CMakeFiles/tdhfb_quench.dir/tdhfb/tdhfb_quench.cpp.o -c /home/wholinator/repos/PHYS517-proj/tdhfb/tdhfb_quench.cpp",
+  "file": "/home/wholinator/repos/PHYS517-proj/tdhfb/tdhfb_quench.cpp",
+  "output": "CMakeFiles/tdhfb_quench.dir/tdhfb/tdhfb_quench.cpp.o"
+},
+{
+  "directory": "/home/wholinator/repos/PHYS517-proj/build",
+  "command": "/usr/bin/c++  -I/usr/include/hdf5/serial -isystem /usr/include/eigen3  -O3 -march=native -DNDEBUG -DEIGEN_NO_DEBUG -O3 -DNDEBUG -std=gnu++17 -o CMakeFiles/tdhfb_quench.dir/tdhfb/hfb_numeric_current.cpp.o -c /home/wholinator/repos/PHYS517-proj/tdhfb/hfb_numeric_current.cpp",
+  "file": "/home/wholinator/repos/PHYS517-proj/tdhfb/hfb_numeric_current.cpp",
+  "output": "CMakeFiles/tdhfb_quench.dir/tdhfb/hfb_numeric_current.cpp.o"
+},
+{
+  "directory": "/home/wholinator/repos/PHYS517-proj/build",
+  "command": "/usr/bin/c++  -I/usr/include/hdf5/serial -isystem /usr/include/eigen3  -O3 -march=native -DNDEBUG -DEIGEN_NO_DEBUG -O3 -DNDEBUG -std=gnu++17 -o CMakeFiles/tdhfb_quench.dir/tdhfb/data_output.cpp.o -c /home/wholinator/repos/PHYS517-proj/tdhfb/data_output.cpp",
+  "file": "/home/wholinator/repos/PHYS517-proj/tdhfb/data_output.cpp",
+  "output": "CMakeFiles/tdhfb_quench.dir/tdhfb/data_output.cpp.o"
+}
+]

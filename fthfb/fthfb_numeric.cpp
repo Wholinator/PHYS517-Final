@@ -24,20 +24,7 @@
 //   ./hfb                  -> seed=entropy, kT=0
 //   ./hfb <seed>           -> seed=<seed>, kT=0
 //   ./hfb <seed> <kT>      -> seed=<seed>, kT=<kT>   (in units of t)
-//
-// Notes on fidelity:
-//   * np.linalg.eigh  -> Eigen::SelfAdjointEigenSolver  (ascending eigenvalues)
-//   * np.kron         -> Eigen::kroneckerProduct
-//   * np.block        -> manual block placement via .block()
-//   * np.roll         -> manual modular index shift
-//   * Random numbers: NumPy's PCG64 / MT19937 streams cannot be bit-reproduced
-//     in standard C++; we use std::mt19937 with std::normal_distribution and
-//     std::uniform_real_distribution. Algorithmic behavior is preserved; the
-//     specific random samples will differ from any given Python run.
-//   * Complex / real typing: the original Python code starts with real p, k,
-//     h and silently promotes them to complex once delta enters the mixing.
-//     Here we keep p, k, h as complex throughout (with zero imaginary parts
-//     initially), which matches the steady-state typing of the Python code.
+
 
 #include <Eigen/Dense>
 #include <unsupported/Eigen/KroneckerProduct>

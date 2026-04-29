@@ -146,6 +146,35 @@ void write_dset_2d_complex(hid_t loc, const std::string& name, const MatXcd& M) 
     H5Dclose(d); H5Sclose(s);
 }
 
+// ---------------- 4D dataset writer (stack of complex matrices) ----------------
+// Writes vector<MatXcd> as a dataset of shape (n_snap, rows, cols, 2),
+// where dim[3] carries the real (0) and imaginary (1) parts.
+void write_dset_4d_complex(hid_t loc, const std::string& name,
+                           const std::vector<MatXcd>& mats) {
+    if (mats.empty()) return;
+    unlink_if_exists(loc, name);
+    const hsize_t n_snap = mats.size();
+    const hsize_t rows   = (hsize_t)mats[0].rows();
+    const hsize_t cols   = (hsize_t)mats[0].cols();
+    hsize_t dims[4] = {n_snap, rows, cols, 2};
+    hid_t s = H5Screate_simple(4, dims, nullptr);
+    hid_t d = H5Dcreate2(loc, name.c_str(), H5T_NATIVE_DOUBLE, s,
+                         H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+    if (d < 0) h5_die("create dset " + name);
+    std::vector<double> buf(n_snap * rows * cols * 2);
+    for (hsize_t si = 0; si < n_snap; ++si) {
+        for (hsize_t i = 0; i < rows; ++i) {
+            for (hsize_t j = 0; j < cols; ++j) {
+                size_t idx = ((si * rows + i) * cols + j) * 2;
+                buf[idx]     = mats[si]((Eigen::Index)i, (Eigen::Index)j).real();
+                buf[idx + 1] = mats[si]((Eigen::Index)i, (Eigen::Index)j).imag();
+            }
+        }
+    }
+    H5Dwrite(d, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, buf.data());
+    H5Dclose(d); H5Sclose(s);
+}
+
 // ---------------- timestamp helper ----------------
 std::string utc_timestamp() {
     auto now = std::chrono::system_clock::now();
@@ -279,5 +308,56 @@ void write_tdhfb_result_hdf5(const TDHFBResult& res, const std::string& path) {
 
     H5Gclose(g);
     H5Gclose(tdhfb_root);
+    H5Fclose(f);
+}
+
+// ============================================================
+//  Public:  write_quench_result_hdf5
+// ============================================================
+void write_quench_result_hdf5(const TDHFBQuenchResult& res, const std::string& path) {
+    hid_t f = open_or_create_file(path);
+
+    write_attr_string(f, "kind",            std::string("tdhfb_quench"));
+    write_attr_string(f, "created_utc",     utc_timestamp());
+    write_attr_int   (f, "x_sites",         res.x_sites);
+    write_attr_int   (f, "y_sites",         res.y_sites);
+    write_attr_int   (f, "n_states",        res.n_states);
+    write_attr_int   (f, "particle_number", res.n_particles);
+    write_attr_double(f, "t_hop",           res.t_hop);
+
+    hid_t g = open_or_create_group(f, "quench");
+
+    write_attr_double(g, "U_initial",   res.U_initial);
+    write_attr_double(g, "U_final",     res.U_final_val);
+    write_attr_double(g, "dtau",        res.dtau);
+    write_attr_double(g, "energy_tol",  res.energy_tol);
+    write_attr_double(g, "mu_final",    res.mu_final);
+    write_attr_double(g, "mu_lr",       res.mu_lr);
+    write_attr_int   (g, "n_steps_done",res.n_steps_done);
+    write_attr_int   (g, "converged",   res.converged ? 1 : 0);
+    write_attr_int   (g, "save_every",  res.save_every);
+
+    // Per-step time series
+    write_dset_1d_double(g, "tau",                res.tau);
+    write_dset_1d_double(g, "energy",             res.energy);
+    write_dset_1d_double(g, "particle_number",    res.particle_number);
+    write_dset_1d_double(g, "idempotency_err",    res.idempotency_err);
+    write_dset_1d_double(g, "hermiticity_err",    res.hermiticity_err);
+    write_dset_1d_double(g, "pairing_gap",        res.pairing_gap);
+    write_dset_1d_double(g, "mu_history",         res.mu_history);
+    write_dset_1d_double(g, "kinetic_energy",     res.kinetic_energy);
+    write_dset_1d_double(g, "interaction_energy", res.interaction_energy);
+    write_dset_1d_double(g, "snap_tau",           res.snap_tau);
+
+    // Matrix snapshots: shape (n_snap, 2N, 2N, 2) in HDF5
+    if (!res.snap_rho.empty())   write_dset_4d_complex(g, "snap_rho",   res.snap_rho);
+    if (!res.snap_kappa.empty()) write_dset_4d_complex(g, "snap_kappa", res.snap_kappa);
+    if (!res.snap_U_bdg.empty()) write_dset_4d_complex(g, "snap_U_bdg", res.snap_U_bdg);
+    if (!res.snap_V_bdg.empty()) write_dset_4d_complex(g, "snap_V_bdg", res.snap_V_bdg);
+
+    if (res.R_final.size() > 0)
+        write_dset_2d_complex(g, "R_final", res.R_final);
+
+    H5Gclose(g);
     H5Fclose(f);
 }

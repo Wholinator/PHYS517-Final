@@ -6,5 +6,5 @@ CXX_DEFINES =
 
 CXX_INCLUDES = -I/usr/include/hdf5/serial -isystem /usr/include/eigen3
 
-CXX_FLAGS =  -O3 -march=native -DNDEBUG -DEIGEN_NO_DEBUG -std=gnu++17
+CXX_FLAGS =  -O3 -march=native -DNDEBUG -DEIGEN_NO_DEBUG -O3 -DNDEBUG -std=gnu++17
 

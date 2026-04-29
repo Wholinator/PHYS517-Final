@@ -6,7 +6,7 @@
                 "${workspaceFolder}/**",
                 "/usr/include/armadillo_bits",
                 "/usr/include/eigen3",
-                "/usr/include/hdf5"
+                   "/usr/include/hdf5/serial"
             ],
             "defines": [],
             "compilerPath": "/usr/bin/gcc",

@@ -69,44 +69,44 @@ include CMakeFiles/fthfb.dir/progress.make
 # Include the compile flags for this target's objects.
 include CMakeFiles/fthfb.dir/flags.make
 
-CMakeFiles/fthfb.dir/fthfb_numeric.cpp.o: CMakeFiles/fthfb.dir/flags.make
-CMakeFiles/fthfb.dir/fthfb_numeric.cpp.o: /home/wholinator/repos/PHYS517-proj/fthfb_numeric.cpp
-CMakeFiles/fthfb.dir/fthfb_numeric.cpp.o: CMakeFiles/fthfb.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/wholinator/repos/PHYS517-proj/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_1) "Building CXX object CMakeFiles/fthfb.dir/fthfb_numeric.cpp.o"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/fthfb.dir/fthfb_numeric.cpp.o -MF CMakeFiles/fthfb.dir/fthfb_numeric.cpp.o.d -o CMakeFiles/fthfb.dir/fthfb_numeric.cpp.o -c /home/wholinator/repos/PHYS517-proj/fthfb_numeric.cpp
+CMakeFiles/fthfb.dir/fthfb/fthfb_numeric.cpp.o: CMakeFiles/fthfb.dir/flags.make
+CMakeFiles/fthfb.dir/fthfb/fthfb_numeric.cpp.o: /home/wholinator/repos/PHYS517-proj/fthfb/fthfb_numeric.cpp
+CMakeFiles/fthfb.dir/fthfb/fthfb_numeric.cpp.o: CMakeFiles/fthfb.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/wholinator/repos/PHYS517-proj/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_1) "Building CXX object CMakeFiles/fthfb.dir/fthfb/fthfb_numeric.cpp.o"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/fthfb.dir/fthfb/fthfb_numeric.cpp.o -MF CMakeFiles/fthfb.dir/fthfb/fthfb_numeric.cpp.o.d -o CMakeFiles/fthfb.dir/fthfb/fthfb_numeric.cpp.o -c /home/wholinator/repos/PHYS517-proj/fthfb/fthfb_numeric.cpp
 
-CMakeFiles/fthfb.dir/fthfb_numeric.cpp.i: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/fthfb.dir/fthfb_numeric.cpp.i"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/wholinator/repos/PHYS517-proj/fthfb_numeric.cpp > CMakeFiles/fthfb.dir/fthfb_numeric.cpp.i
+CMakeFiles/fthfb.dir/fthfb/fthfb_numeric.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/fthfb.dir/fthfb/fthfb_numeric.cpp.i"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/wholinator/repos/PHYS517-proj/fthfb/fthfb_numeric.cpp > CMakeFiles/fthfb.dir/fthfb/fthfb_numeric.cpp.i
 
-CMakeFiles/fthfb.dir/fthfb_numeric.cpp.s: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/fthfb.dir/fthfb_numeric.cpp.s"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/wholinator/repos/PHYS517-proj/fthfb_numeric.cpp -o CMakeFiles/fthfb.dir/fthfb_numeric.cpp.s
+CMakeFiles/fthfb.dir/fthfb/fthfb_numeric.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/fthfb.dir/fthfb/fthfb_numeric.cpp.s"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/wholinator/repos/PHYS517-proj/fthfb/fthfb_numeric.cpp -o CMakeFiles/fthfb.dir/fthfb/fthfb_numeric.cpp.s
 
-CMakeFiles/fthfb.dir/data_output.cpp.o: CMakeFiles/fthfb.dir/flags.make
-CMakeFiles/fthfb.dir/data_output.cpp.o: /home/wholinator/repos/PHYS517-proj/data_output.cpp
-CMakeFiles/fthfb.dir/data_output.cpp.o: CMakeFiles/fthfb.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/wholinator/repos/PHYS517-proj/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_2) "Building CXX object CMakeFiles/fthfb.dir/data_output.cpp.o"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/fthfb.dir/data_output.cpp.o -MF CMakeFiles/fthfb.dir/data_output.cpp.o.d -o CMakeFiles/fthfb.dir/data_output.cpp.o -c /home/wholinator/repos/PHYS517-proj/data_output.cpp
+CMakeFiles/fthfb.dir/fthfb/data_output.cpp.o: CMakeFiles/fthfb.dir/flags.make
+CMakeFiles/fthfb.dir/fthfb/data_output.cpp.o: /home/wholinator/repos/PHYS517-proj/fthfb/data_output.cpp
+CMakeFiles/fthfb.dir/fthfb/data_output.cpp.o: CMakeFiles/fthfb.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/wholinator/repos/PHYS517-proj/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_2) "Building CXX object CMakeFiles/fthfb.dir/fthfb/data_output.cpp.o"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/fthfb.dir/fthfb/data_output.cpp.o -MF CMakeFiles/fthfb.dir/fthfb/data_output.cpp.o.d -o CMakeFiles/fthfb.dir/fthfb/data_output.cpp.o -c /home/wholinator/repos/PHYS517-proj/fthfb/data_output.cpp
 
-CMakeFiles/fthfb.dir/data_output.cpp.i: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/fthfb.dir/data_output.cpp.i"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/wholinator/repos/PHYS517-proj/data_output.cpp > CMakeFiles/fthfb.dir/data_output.cpp.i
+CMakeFiles/fthfb.dir/fthfb/data_output.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/fthfb.dir/fthfb/data_output.cpp.i"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/wholinator/repos/PHYS517-proj/fthfb/data_output.cpp > CMakeFiles/fthfb.dir/fthfb/data_output.cpp.i
 
-CMakeFiles/fthfb.dir/data_output.cpp.s: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/fthfb.dir/data_output.cpp.s"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/wholinator/repos/PHYS517-proj/data_output.cpp -o CMakeFiles/fthfb.dir/data_output.cpp.s
+CMakeFiles/fthfb.dir/fthfb/data_output.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/fthfb.dir/fthfb/data_output.cpp.s"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/wholinator/repos/PHYS517-proj/fthfb/data_output.cpp -o CMakeFiles/fthfb.dir/fthfb/data_output.cpp.s
 
 # Object files for target fthfb
 fthfb_OBJECTS = \
-"CMakeFiles/fthfb.dir/fthfb_numeric.cpp.o" \
-"CMakeFiles/fthfb.dir/data_output.cpp.o"
+"CMakeFiles/fthfb.dir/fthfb/fthfb_numeric.cpp.o" \
+"CMakeFiles/fthfb.dir/fthfb/data_output.cpp.o"
 
 # External object files for target fthfb
 fthfb_EXTERNAL_OBJECTS =
 
-fthfb: CMakeFiles/fthfb.dir/fthfb_numeric.cpp.o
-fthfb: CMakeFiles/fthfb.dir/data_output.cpp.o
+fthfb: CMakeFiles/fthfb.dir/fthfb/fthfb_numeric.cpp.o
+fthfb: CMakeFiles/fthfb.dir/fthfb/data_output.cpp.o
 fthfb: CMakeFiles/fthfb.dir/build.make
 fthfb: /usr/lib/x86_64-linux-gnu/hdf5/serial/libhdf5.so
 fthfb: /usr/lib/x86_64-linux-gnu/libcrypto.so

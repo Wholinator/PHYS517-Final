@@ -677,7 +677,7 @@ HFBResult run_hfb_hubbard(int PARTICLE_NUMBER, int STATES,
 
     // ----- SCF loop -----
     //
-    // Order of operations (per user's spec):
+    // Order of operations:
     //   1. Build h, delta, find chemical potential, build H_BdG.
     //   2. Compute DIIS error = [H_BdG, R_prev] and decide engagement.
     //   3. If engaged & queue full: extrapolate H_BdG.
@@ -693,7 +693,7 @@ HFBResult run_hfb_hubbard(int PARTICLE_NUMBER, int STATES,
     MatXcd prev_R_full;             // last full BdG density (4*STATES x 4*STATES)
     bool   has_prev_R_full = false;
 
-    // DIIS warm-up & queue policy (per user's spec):
+    // DIIS warm-up & queue policy:
     //   * Iterations 1..DIIS_WARMUP_NOSTORE: don't even compute residuals.
     //   * From DIIS_WARMUP_NOSTORE+1 onward: compute & store residuals,
     //     popping from the front to keep the queue at <= DIIS_WINDOW.

@@ -50,4 +50,6 @@ set(CMAKE_MAKEFILE_PRODUCTS
 set(CMAKE_DEPEND_INFO_FILES
   "CMakeFiles/hfb.dir/DependInfo.cmake"
   "CMakeFiles/fthfb.dir/DependInfo.cmake"
+  "CMakeFiles/tdhfb.dir/DependInfo.cmake"
+  "CMakeFiles/tdhfb_quench.dir/DependInfo.cmake"
   )

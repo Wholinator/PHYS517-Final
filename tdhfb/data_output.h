@@ -99,3 +99,48 @@ struct TDHFBResult {
 };
 
 void write_tdhfb_result_hdf5(const TDHFBResult& res, const std::string& path);
+
+// ===================================================================
+//  TDHFBQuenchResult — produced by run_tdhfb_quench() in tdhfb_quench.cpp
+// ===================================================================
+struct TDHFBQuenchResult {
+    // Per-step diagnostics (recorded every step)
+    std::vector<double> tau;               // imaginary time τ
+    std::vector<double> energy;            // E(τ), should decrease monotonically
+    std::vector<double> particle_number;   // Tr(ρ), should stay ≈ N
+    std::vector<double> idempotency_err;   // ‖R²−R‖_F, should be ≈ 0 after purify
+    std::vector<double> hermiticity_err;   // ‖R−R†‖_F
+    std::vector<double> pairing_gap;       // (1/N) Σ_i |κ_{i,i+N}|
+    std::vector<double> mu_history;        // μ(τ)
+    std::vector<double> kinetic_energy;
+    std::vector<double> interaction_energy;
+
+    // Matrix snapshots (every save_every steps)
+    // Stored as (n_snap × 2N × 2N) or (n_snap × 2N × 4N) — see HDF5 dims
+    std::vector<double> snap_tau;          // τ values at snapshot steps
+    std::vector<MatXcd> snap_rho;          // ρ (2N×2N) at each snapshot
+    std::vector<MatXcd> snap_kappa;        // κ (2N×2N) at each snapshot
+    std::vector<MatXcd> snap_U_bdg;        // U_bdg (2N×2N) occupied amplitudes
+    std::vector<MatXcd> snap_V_bdg;        // V_bdg (2N×2N) occupied amplitudes
+
+    // Final generalized density matrix
+    MatXcd R_final;
+
+    // Metadata
+    double U_initial   = 0.0;
+    double U_final_val = 0.0;
+    double dtau        = 0.0;
+    double energy_tol  = 0.0;
+    double mu_final    = 0.0;
+    double mu_lr       = 0.0;
+    int    n_steps_done = 0;
+    bool   converged   = false;
+    int    x_sites     = 0;
+    int    y_sites     = 0;
+    int    n_states    = 0;
+    int    n_particles = 0;
+    double t_hop       = 1.0;
+    int    save_every  = 4;
+};
+
+void write_quench_result_hdf5(const TDHFBQuenchResult& res, const std::string& path);
