@@ -36,10 +36,7 @@ using VecXd  = Eigen::VectorXd;
 //  Random-number infrastructure
 // ===================================================================
 //
-// The Python code uses both the legacy global RNG (np.random.randn /
-// np.random.uniform) and a fresh default_rng() inside init_hfb_kappa.
-// Bit-exact reproduction across language boundaries is not feasible, so
-// we keep one std::mt19937 here and document the call sites.
+// We keep one std::mt19937 here and document the call sites.
 
 static std::mt19937 g_rng{std::random_device{}()};
 
@@ -133,8 +130,7 @@ inline double fro_norm(const MatXcd& A) { return A.norm(); }
 // ===================================================================
 //
 // Project a Hermitian matrix's eigenvalues onto values allowed by a
-// predicate.  Mirrors purify_evals() in the predicate ("callable") branch
-// of the Python code.  The discrete branch is unused in the main pipeline,
+// predicate.  The discrete branch is unused in the main pipeline,
 // so we omit it here.
 
 MatXd purify_evals_predicate(const std::function<bool(double)>& is_allowed,
@@ -266,9 +262,8 @@ MatXd init_rho(int  block_dim,
         MatXd one_minus_eye = MatXd::Ones(block_dim, block_dim) - MatXd::Identity(block_dim, block_dim);
         off1 = (off1.array() * one_minus_eye.array()).matrix();
         off2 = (off2.array() * one_minus_eye.array()).matrix();
-        // NB: the Python code uses element-wise A*A.T (not A @ A.T) here.
-        // We replicate that exactly, faithful to the original even though
-        // it does not actually produce a Hermitian matrix in general.
+        // NB: element-wise A*A.T (not A @ A.T) — does not produce a
+        // Hermitian matrix in general, but matches the intended behavior.
         off1 = 0.5 * (off1.array() * off1.transpose().array()).matrix();
         off2 = 0.5 * (off2.array() * off2.transpose().array()).matrix();
         rho += block_diag2<MatXd>(off1, off2);
@@ -377,9 +372,8 @@ MatXcd build_fock_matrix(int roll_by, const MatXd& t_mat, const MatXcd& p, doubl
 //  Delta builder (anomalous mean field)
 // ===================================================================
 MatXcd build_delta(const MatXcd& kappa, double U_val, int nstates) {
-    // The Python code creates a "k-superdiagonal + k-subdiagonal" mask and does
-    //   delta = 2*U_val * (kappa * hubbard_k_map).T
-    // i.e., element-wise multiply, then transpose.
+    // Mask to on-site off-diagonal elements (i, i+nstates) only, then
+    // transpose and scale:  delta = 2*U_val * masked.T
     const int N = nstates * 2;
     MatXcd masked = MatXcd::Zero(N, N);
     // hubbard_k_map has 1s only at (i, i+nstates) and (i+nstates, i).
@@ -585,8 +579,8 @@ HFBResult run_hfb_hubbard(int PARTICLE_NUMBER, int STATES,
                           const MatXcd* p_GUESS = nullptr,
                           const MatXcd* k_GUESS = nullptr,
                           double temperature = 0.0) {
-    const double sym_tol  = 1e-7;     // matches Python (currently unused)
-    const double conv_tol = 1e-8;     // matches Python (used implicitly below)
+    const double sym_tol  = 1e-7;     // symmetry tolerance (currently unused)
+    const double conv_tol = 1e-8;     // convergence tolerance
     const double chem_tol = 1e-12;
     (void) sym_tol; (void) conv_tol;
 
@@ -658,11 +652,11 @@ HFBResult run_hfb_hubbard(int PARTICLE_NUMBER, int STATES,
     bool   has_prev_mu     = false;
     const double mu_window = 0.1;   // half-width of warm-start bracket
 
-    // DIIS state.  Per user's spec we extrapolate the BdG Hamiltonian H_BdG,
+    // DIIS state.  We extrapolate the BdG Hamiltonian H_BdG,
     // not R.  Error vector is e = [H_BdG, R_prev] (current H against
     // previous R), evaluated immediately after H_BdG is built.
     //
-    // Lifecycle (per user's spec):
+    // Lifecycle:
     //   * Iters 1..DIIS_WARMUP_NOSTORE: don't compute or store residuals.
     //   * After warm-up: compute & store every iteration, FIFO-evict from
     //     the front to keep at most DIIS_WINDOW entries.
@@ -677,7 +671,7 @@ HFBResult run_hfb_hubbard(int PARTICLE_NUMBER, int STATES,
 
     // ----- SCF loop -----
     //
-    // Order of operations (per user's spec):
+    // Order of operations:
     //   1. Build h, delta, find chemical potential, build H_BdG.
     //   2. Compute DIIS error = [H_BdG, R_prev] and decide engagement.
     //   3. If engaged & queue full: extrapolate H_BdG.
@@ -693,7 +687,7 @@ HFBResult run_hfb_hubbard(int PARTICLE_NUMBER, int STATES,
     MatXcd prev_R_full;             // last full BdG density (4*STATES x 4*STATES)
     bool   has_prev_R_full = false;
 
-    // DIIS warm-up & queue policy (per user's spec):
+    // DIIS warm-up & queue policy:
     //   * Iterations 1..DIIS_WARMUP_NOSTORE: don't even compute residuals.
     //   * From DIIS_WARMUP_NOSTORE+1 onward: compute & store residuals,
     //     popping from the front to keep the queue at <= DIIS_WINDOW.
@@ -740,7 +734,7 @@ HFBResult run_hfb_hubbard(int PARTICLE_NUMBER, int STATES,
             MatXcd err = H_BdG * prev_R_full - prev_R_full * H_BdG;
             err_norm   = err.norm();   // Frobenius
 
-            // Engagement (per user's spec): use DIIS when 1e-9 < ||e||_F < 1e-3.
+            // Engagement: use DIIS when 1e-9 < ||e||_F < 1e-3.
             // No latching -- re-evaluated every iteration.
             const bool in_band = (err_norm < DIIS_START) && (err_norm > DIIS_STOP);
 
@@ -958,7 +952,7 @@ HFBResult run_hfb_hubbard(int PARTICLE_NUMBER, int STATES,
 #ifdef HFB_STANDALONE_MAIN
 int main(int argc, char** argv) {
     // Optional CLI seed for reproducibility:
-    //   ./hfb           -> entropy-seeded (matches Python default behavior)
+    //   ./hfb           -> entropy-seeded
     //   ./hfb 42        -> deterministic
     if (argc > 1) {
         seed_rng(static_cast<uint64_t>(std::stoull(argv[1])));
@@ -983,7 +977,7 @@ int main(int argc, char** argv) {
         }
     }
 
-    // First call: warm-up (matches Python)
+    // First call: warm-up
     HFBResult res = run_hfb_hubbard(PARTICLE_NUMBER, STATES, x_, y_, U, t,
                                     nullptr, nullptr, temperature);
     MatXcd p = res.p, k = res.k;
